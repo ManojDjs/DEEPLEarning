@@ -1,0 +1,26 @@
+dataset:
+  clip_length: 180
+  format: rgb
+  label_path: ./datasets/BPD4/gtdump.xmp
+  name: BPD4
+  step: 30
+  video_path: ./datasets/BPD4/videos
+model:
+  dropout: 0.25
+  frames: 180
+  input_size:
+  - 3
+  - 36
+  - 36
+  name: mtts_can
+  num_classes: 1
+  sampling_rate: 30
+output:
+  save_dir: ./saved_models/mtts_can_BPD4
+training:
+  batch_size: 4
+  epochs: 50
+  learning_rate: 0.001
+  loss_fn: mse
+  optimizer: adam
+  shuffle: true

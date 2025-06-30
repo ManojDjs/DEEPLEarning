@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Heart Rate Monitor</title>
+</head>
+<body>
+  <h2>Real-time Heart Rate Monitor</h2>
+  <video id="video" autoplay playsinline width="320" height="240"></video>
+  <p id="status">Connecting...</p>
+  <p id="bpm">Heart Rate: -- bpm</p>
+
+  <script>
+    const video = document.getElementById('video');
+    const bpmDisplay = document.getElementById('bpm');
+    const status = document.getElementById('status');
+
+    // Open WebSocket connection
+    const ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+    ws.onopen = () => {
+      status.textContent = "Connected to server";
+      startCamera();
+    };
+
+    ws.onclose = () => {
+      status.textContent = "Disconnected";
+    };
+
+    ws.onerror = (err) => {
+      status.textContent = "WebSocket error";
+      console.error(err);
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.bpm) {
+        bpmDisplay.textContent = `Heart Rate: ${data.bpm.toFixed(1)} bpm`;
+      }
+    };
+
+    function startCamera() {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+          sendFramesPeriodically();
+        })
+        .catch(err => {
+          status.textContent = "Could not access webcam";
+          console.error(err);
+        });
+    }
+
+    function sendFramesPeriodically() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+
+      setInterval(() => {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL('image/jpeg', 0.7);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(dataURL);
+        }
+      }, 3000);  // send every 3 seconds
+    }
+  </script>
+</body>
+</html>

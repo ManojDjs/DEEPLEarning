@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Heart Rate Monitor</title>
+    <style>
+      body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+      video { border: 1px solid #ccc; border-radius: 5px; }
+      #hr { font-size: 2rem; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Heart Rate Monitor</h1>
+    <video id="video" autoplay playsinline width="320" height="240"></video>
+    <div id="hr">Heart Rate: --</div>
+
+    <script>
+      const video = document.getElementById("video");
+      const hrDiv = document.getElementById("hr");
+
+      // Start webcam
+      async function startWebcam() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+        } catch (err) {
+          alert("Error accessing webcam: " + err);
+        }
+      }
+
+      startWebcam();
+
+      // Setup WebSocket connection
+      const ws = new WebSocket(`ws://${window.location.host}/ws/stream`);
+
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        startSendingFrames();
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.heart_rate) {
+          hrDiv.textContent = `Heart Rate: ${data.heart_rate} bpm`;
+        }
+      };
+
+      ws.onclose = () => {
+        console.log("WebSocket disconnected");
+      };
+
+      ws.onerror = (e) => {
+        console.error("WebSocket error:", e);
+      };
+
+      // Capture frame from video and send every 3 seconds
+      function captureFrame() {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/jpeg");
+      }
+
+      function startSendingFrames() {
+        setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            const frameData = captureFrame();
+            ws.send(frameData);
+          }
+        }, 3000);
+      }
+    </script>
+</body>
+</html>
